@@ -1,0 +1,16 @@
+.custom-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 48px;
+    height: 100%;
+    padding-left: 2px;
+    padding-right: 2px;
+    border: none;
+    cursor: pointer;
+    background-color: transparent;
+    float: left; /* Equivalent to float-start */
+    outline: none;
+    opacity: 0.9;
+    position: relative;
+}
