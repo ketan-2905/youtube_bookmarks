@@ -1,3 +1,5 @@
+import formatTime from "./utils.js";
+
 function renderBookmarks(videoId, frames, duration) {
   const container = document.querySelector(".container");
   if (!container) return;
@@ -18,9 +20,9 @@ function renderBookmarks(videoId, frames, duration) {
       }" class="timeframe">
           <div class="play-time">
             <button class="btn play"></button>
-            <div class="time"><p>${frame.title}</p>${(
-        frame.timestamp / 60
-      ).toFixed(2)}/${(duration / 60).toFixed(2)}</div>  
+            <div class="time"><p>${frame.title}</p>${formatTime(
+        frame.timestamp
+      )}/${formatTime(duration)}</div>  
           </div>
           <button class="btn delete"></button>
         </div>`
@@ -41,10 +43,10 @@ function renderVideos(videos) {
 
   const videoIdsDiv = document.createElement("div");
   videoIdsDiv.classList = "videos";
-  videoIdsDiv.innerHTML = videos.map((video) => `
-        <div class="video" id="${video.videoId}" data-key="${
-        video.videoId
-      }" class="timeframe">
+  videoIdsDiv.innerHTML = videos
+    .map(
+      (video) => `
+        <div class="video" id="${video.videoId}" data-key="${video.videoId}" class="timeframe">
           <div class="play-time">
             <button class="btn play"></button>
             <div class="time"><p>${video.videoTitle}</p></div>  
@@ -66,7 +68,7 @@ function attachEventListeners() {
     const play = event.target.closest(".play-time");
     const del = event.target.closest(".delete");
 
-    if (play) {      
+    if (play) {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const currentUrl = tabs[0].url;
         if (currentUrl.includes("youtube.com/watch")) {
@@ -75,12 +77,15 @@ function attachEventListeners() {
             action: "notifyBackgroundToPlay",
             timeFrame: playTime,
           });
-        }else{
-          const Id = videoId.dataset.key  
-          
-          chrome.runtime.sendMessage({ action: "open_new_tab", url: `https://www.youtube.com/watch?v=${Id}` });
+        } else {
+          const Id = videoId.dataset.key;
+
+          chrome.runtime.sendMessage({
+            action: "open_new_tab",
+            url: `https://www.youtube.com/watch?v=${Id}`,
+          });
         }
-      })
+      });
     }
 
     if (del) {
@@ -167,9 +172,9 @@ document.addEventListener("DOMContentLoaded", () => {
               videoTitle: result[key].videoTitle,
               videoId: key,
             };
-            videos.push(video)
+            videos.push(video);
           });
-          renderVideos(videos)
+          renderVideos(videos);
         }
       });
     }
