@@ -3,8 +3,6 @@ const ytp_right_controls =
 const video_stream = document.getElementsByClassName("video-stream");
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Content script received message:", request);
-
   if (request.action === "injectBookmark") {
     if (ytp_right_controls.length === 0) return;
 
@@ -34,10 +32,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const videoId = new URL(window.location.href).searchParams.get("v");
 
       const title = prompt("Bookmark title");
+      if(!title) return;
 
       const titleElement = document.querySelector(
         "h1.ytd-watch-metadata yt-formatted-string"
       );
+
       const text = titleElement?.innerText.trim() || "Text not found";
 
       chrome.runtime.sendMessage({
@@ -52,17 +52,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "notifyContentToPlay") {
-    console.log("Received play request:", request.timeFrame);
-    console.log("Video stream exists:", video_stream.length > 0);
-
     if (video_stream.length > 0) {
       try {
         const timeToPlay = parseFloat(request.timeFrame);
-        console.log("Attempting to set time:", timeToPlay);
-
         if (!isNaN(timeToPlay)) {
           video_stream[0].currentTime = timeToPlay;
-          console.log("Successfully set video time");
         } else {
           console.error("Invalid time received");
         }
@@ -75,7 +69,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "GET_DURATION") {
-    const duration = video_stream.duration;
+    const duration = video_stream[0].duration;
     sendResponse({ duration: duration });
   }
 });

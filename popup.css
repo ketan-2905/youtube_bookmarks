@@ -81,6 +81,7 @@
   width: 90%;
 }
 
+
 .videoIds{
   background-color: var(--frame-bg);
   display: flex;
@@ -89,7 +90,7 @@
   flex-direction: column;
 }
 
-.videoId{
+.videoId, .videos{
   padding: 0.5rem;
   background-color: var(--frame-bg);
   display: flex;
@@ -99,7 +100,7 @@
   gap: 6px;
 }
 
-.timeframe{
+.timeframe, .video{
   border-radius: 4px;
   background-color: var(--frame-focus);
   width: 100%;

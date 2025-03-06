@@ -30,36 +30,30 @@ function renderBookmarks(videoId, frames, duration) {
   container.appendChild(div);
 }
 
-function renderVideos(videoIds, frames, duration) {
+function renderVideos(videos) {
   const container = document.querySelector(".container");
   if (!container) return;
 
-  const existingVideoBookmarks = document.getElementById(videoId);
+  const existingVideoBookmarks = document.querySelector(".video");
   if (existingVideoBookmarks) {
     existingVideoBookmarks.remove();
   }
 
-  const div = document.createElement("div");
-  div.classList = "videoId";
-  div.id = videoId;
-  div.innerHTML = frames
-    .map(
-      (frame) => `
-        <div id="${frame.timestamp}" data-key="${
-        frame.timestamp
+  const videoIdsDiv = document.createElement("div");
+  videoIdsDiv.classList = "videos";
+  videoIdsDiv.innerHTML = videos.map((video) => `
+        <div class="video" id="${video.videoId}" data-key="${
+        video.videoId
       }" class="timeframe">
           <div class="play-time">
             <button class="btn play"></button>
-            <div class="time"><p>${frame.title}</p>${(
-        frame.timestamp / 60
-      ).toFixed(2)}/${(duration / 60).toFixed(2)}</div>  
+            <div class="time"><p>${video.videoTitle}</p></div>  
           </div>
           <button class="btn delete"></button>
         </div>`
     )
     .join("");
-
-  container.appendChild(div);
+  container.appendChild(videoIdsDiv);
 }
 
 function attachEventListeners() {
@@ -67,17 +61,26 @@ function attachEventListeners() {
   if (!container) return;
 
   container.addEventListener("click", async (event) => {
+    const videoId = event.target.closest(".video");
     const frame = event.target.closest(".timeframe");
     const play = event.target.closest(".play-time");
     const del = event.target.closest(".delete");
 
-    if (play) {
-      const playTime = frame.dataset.key;
-
-      chrome.runtime.sendMessage({
-        action: "notifyBackgroundToPlay",
-        timeFrame: playTime,
-      });
+    if (play) {      
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const currentUrl = tabs[0].url;
+        if (currentUrl.includes("youtube.com/watch")) {
+          const playTime = frame.dataset.key;
+          chrome.runtime.sendMessage({
+            action: "notifyBackgroundToPlay",
+            timeFrame: playTime,
+          });
+        }else{
+          const Id = videoId.dataset.key  
+          
+          chrome.runtime.sendMessage({ action: "open_new_tab", url: `https://www.youtube.com/watch?v=${Id}` });
+        }
+      })
     }
 
     if (del) {
@@ -92,17 +95,26 @@ function attachEventListeners() {
               const newFrames = result[videoId].frames.filter(
                 (frame) => frame.timestamp.toString() !== playTime
               );
-
-              chrome.storage.local.set(
-                {
-                  [videoId]: {
-                    frames: newFrames,
-                    duration: result[videoId].duration,
+              if (newFrames.length) {
+                chrome.storage.local.set(
+                  {
+                    [videoId]: {
+                      frames: newFrames,
+                      duration: result[videoId].duration,
+                    },
                   },
-                },
-                () =>
+                  () =>
+                    renderBookmarks(
+                      videoId,
+                      newFrames,
+                      result[videoId].duration
+                    )
+                );
+              } else {
+                chrome.storage.local.remove([videoId], () =>
                   renderBookmarks(videoId, newFrames, result[videoId].duration)
-              );
+                );
+              }
             }
           });
         }
@@ -131,7 +143,6 @@ document.addEventListener("DOMContentLoaded", () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const activeTab = tabs[0];
     const title = activeTab.title;
-    console.log(tabs[0]);
     const currentUrl = tabs[0].url;
     if (currentUrl.includes("youtube.com/watch")) {
       const videoId = new URL(currentUrl).searchParams.get("v");
@@ -147,12 +158,20 @@ document.addEventListener("DOMContentLoaded", () => {
           );
         }
       });
-    }else{
+    } else {
       chrome.storage.local.get(null, (result) => {
         if (result) {
-          console.log(result); // Logs all stored data
-      }
-      })
+          const videos = [];
+          Object.keys(result).forEach((key) => {
+            const video = {
+              videoTitle: result[key].videoTitle,
+              videoId: key,
+            };
+            videos.push(video)
+          });
+          renderVideos(videos)
+        }
+      });
     }
   });
 

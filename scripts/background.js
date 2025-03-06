@@ -18,20 +18,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       existingFrames = existingFrames.filter(
         (existingFrame) => existingFrame.timestamp !== request.timestamp
       );
-      console.log(existingFrames);
-
       const updatedFrames = [
         ...existingFrames,
         { timestamp: request.timestamp, title: request.title },
       ];
 
-      if (!result) {
+      if (!result[request.videoId]) {
+        // New video, need to get all metadata
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           const activeTab = tabs[0];
           const title = activeTab.title;
-
+          const currentUrl = activeTab.url;
           if (currentUrl.includes("youtube.com/watch")) {
-            const videoId = new URL(currentUrl).searchParams.get("v");
             chrome.tabs.sendMessage(
               activeTab.id,
               { action: "GET_DURATION" },
@@ -46,11 +44,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     },
                   },
                   () => {
+                    // Storage updated callback
                     chrome.runtime.sendMessage({
                       action: "updateBookmarks",
                       videoId: request.videoId,
                       frames: updatedFrames,
-                      duration: request.duration,
+                      duration: response.duration,
                     });
                   }
                 );
@@ -59,13 +58,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           }
         });
       } else {
+        // Update existing video data
         chrome.storage.local.set(
           {
             [request.videoId]: {
+              ...result[request.videoId], // Preserve existing data
               frames: updatedFrames,
-              duration: request.duration,
-              videoTitle: request.videoTitle,
-              videoId: request.videoId,
             },
           },
           () => {
@@ -73,7 +71,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               action: "updateBookmarks",
               videoId: request.videoId,
               frames: updatedFrames,
-              duration: request.duration,
+              duration: result[request.videoId].duration,
             });
           }
         );
@@ -90,5 +88,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
       });
     }
+  }
+
+  if (request.action === "open_new_tab") {
+    chrome.tabs.create({ url: request.url });
   }
 });
